@@ -8,7 +8,7 @@ export function App(): ReactNode {
   const [entries, setEntries] = useState<LogEntry[]>()
   const [rawRecords, setRawRecords] = useState<RawRecord[]>()
 
-  const [showRawLog, setShowRawLog] = useState(true)
+  const [showRawLog, setShowRawLog] = useState(false)
 
   const handleFile = async (file: File) => {
     setFileName(file.name)
