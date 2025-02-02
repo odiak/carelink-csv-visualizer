@@ -198,10 +198,16 @@ function VisualizerOnDate({ entries }: { entries: LogEntry[] }): ReactNode {
               }}
             >
               {bgInfoOnCursor.sensorBg !== undefined && (
-                <div>sensor: {bgInfoOnCursor.sensorBg.bgValue}</div>
+                <div>
+                  sensor: {bgInfoOnCursor.sensorBg.bgValue}mg/dL (
+                  {getShortTime(bgInfoOnCursor.sensorBg.timestamp)})
+                </div>
               )}
               {bgInfoOnCursor.remoteBg !== undefined && (
-                <div>remote: {bgInfoOnCursor.remoteBg.bgValue}</div>
+                <div>
+                  remote: {bgInfoOnCursor.remoteBg.bgValue}mg/dL (
+                  {getShortTime(bgInfoOnCursor.remoteBg.timestamp)})
+                </div>
               )}
             </div>
           )}
@@ -209,4 +215,8 @@ function VisualizerOnDate({ entries }: { entries: LogEntry[] }): ReactNode {
       )}
     </div>
   )
+}
+
+function getShortTime(date: Date): string {
+  return formatDate(date, 'time').slice(0, 5)
 }
