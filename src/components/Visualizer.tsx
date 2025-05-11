@@ -71,7 +71,7 @@ function VisualizerOnDate({ entries }: { entries: LogEntry[] }): ReactNode {
     x: number
     y: number
     sensorBg?: Extract<LogEntry, { type: 'sensor-bg' }>
-    remoteBg?: Extract<LogEntry, { type: 'remote-bg' }>
+    measuredBg?: Extract<LogEntry, { type: 'measured-bg' }>
   }>()
 
   useEffect(() => {
@@ -90,7 +90,7 @@ function VisualizerOnDate({ entries }: { entries: LogEntry[] }): ReactNode {
     const y = e.clientY - rect.top
     const t = (24 * 60 * x) / width
     const sorted = entries
-      .filter((e) => e.type === 'sensor-bg' || e.type === 'remote-bg')
+      .filter((e) => e.type === 'sensor-bg' || e.type === 'measured-bg')
       .map((e) => ({
         ...e,
         t: e.timestamp.getHours() * 60 + e.timestamp.getMinutes(),
@@ -99,14 +99,14 @@ function VisualizerOnDate({ entries }: { entries: LogEntry[] }): ReactNode {
       .sort((a, b) => Math.abs(a.t - t) - Math.abs(b.t - t))
       .slice(0, 3)
     const sensorBg = sorted.find((e) => e.type === 'sensor-bg')
-    const remoteBg = sorted.find((e) => e.type === 'remote-bg')
+    const measuredBg = sorted.find((e) => e.type === 'measured-bg')
 
-    if (sensorBg !== undefined || remoteBg !== undefined) {
+    if (sensorBg !== undefined || measuredBg !== undefined) {
       setBgInfoOnCursor({
         x,
         y,
         sensorBg,
-        remoteBg,
+        measuredBg,
       })
     } else {
       setBgInfoOnCursor(undefined)
@@ -169,7 +169,7 @@ function VisualizerOnDate({ entries }: { entries: LogEntry[] }): ReactNode {
                 const y = H * (1 - entry.bgValue / 400)
                 return <circle key={i} cx={x} cy={y} r={2} fill="#88d" />
               }
-              if (entry.type === 'remote-bg') {
+              if (entry.type === 'measured-bg') {
                 const y = H * (1 - entry.bgValue / 400)
                 return <circle key={i} cx={x} cy={y} r={3} fill="#07f" />
               }
@@ -203,10 +203,10 @@ function VisualizerOnDate({ entries }: { entries: LogEntry[] }): ReactNode {
                   {getShortTime(bgInfoOnCursor.sensorBg.timestamp)})
                 </div>
               )}
-              {bgInfoOnCursor.remoteBg !== undefined && (
+              {bgInfoOnCursor.measuredBg !== undefined && (
                 <div>
-                  remote: {bgInfoOnCursor.remoteBg.bgValue}mg/dL (
-                  {getShortTime(bgInfoOnCursor.remoteBg.timestamp)})
+                  measured: {bgInfoOnCursor.measuredBg.bgValue}mg/dL (
+                  {getShortTime(bgInfoOnCursor.measuredBg.timestamp)})
                 </div>
               )}
             </div>

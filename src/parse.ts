@@ -11,7 +11,7 @@ export type LogEntry = {
       carbGrams?: number
     }
   | {
-      type: 'remote-bg'
+      type: 'measured-bg'
       bgValue: number
     }
 )
@@ -126,7 +126,7 @@ export async function parseFile(
       rawRecord['BG Source'] === 'ENTERED_IN_BG_ENTRY' // manually entered
     ) {
       entries.push({
-        type: 'remote-bg',
+        type: 'measured-bg',
         bgValue: Number(rawRecord['BG Reading (mg/dL)']),
         timestamp,
       })
