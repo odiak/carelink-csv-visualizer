@@ -121,7 +121,10 @@ export async function parseFile(
       })
       continue
     }
-    if (rawRecord['BG Source'] === 'USER_ACCEPTED_REMOTE_BG') {
+    if (
+      rawRecord['BG Source'] === 'USER_ACCEPTED_REMOTE_BG' || // sent from measurement device
+      rawRecord['BG Source'] === 'ENTERED_IN_BG_ENTRY' // manually entered
+    ) {
       entries.push({
         type: 'remote-bg',
         bgValue: Number(rawRecord['BG Reading (mg/dL)']),
