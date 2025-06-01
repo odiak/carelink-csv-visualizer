@@ -9,7 +9,60 @@ import {
 import { LogEntry } from '../parse'
 import { formatDate } from '../formatDate'
 
+/** calculate moving average */
+function calculateMovingAverage(
+  allEntries: LogEntry[],
+  targetDate: Date,
+  windowHours: number = 24,
+): Array<{ timestamp: Date; value: number }> {
+  const sensorBgEntries = allEntries
+    .filter(
+      (entry): entry is Extract<LogEntry, { type: 'sensor-bg' }> =>
+        entry.type === 'sensor-bg',
+    )
+    .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+
+  const targetDateStart = new Date(targetDate)
+  targetDateStart.setHours(0, 0, 0, 0)
+  const targetDateEnd = new Date(targetDate)
+  targetDateEnd.setHours(23, 59, 59, 999)
+
+  const movingAveragePoints: Array<{ timestamp: Date; value: number }> = []
+
+  // Calculate moving average for each time in target date
+  for (let hour = 0; hour < 24; hour++) {
+    for (let minute = 0; minute < 60; minute += 15) {
+      // 15 minute intervals
+      const currentTime = new Date(targetDate)
+      currentTime.setHours(hour, minute, 0, 0)
+
+      const windowStart = new Date(
+        currentTime.getTime() - windowHours * 60 * 60 * 1000,
+      )
+
+      const relevantEntries = sensorBgEntries.filter(
+        (entry) =>
+          entry.timestamp >= windowStart && entry.timestamp <= currentTime,
+      )
+
+      if (relevantEntries.length > 0) {
+        const average =
+          relevantEntries.reduce((sum, entry) => sum + entry.bgValue, 0) /
+          relevantEntries.length
+        movingAveragePoints.push({
+          timestamp: new Date(currentTime),
+          value: average,
+        })
+      }
+    }
+  }
+
+  return movingAveragePoints
+}
+
 export function Visualizer({ entries }: { entries: LogEntry[] }): ReactNode {
+  const [showMovingAverage, setShowMovingAverage] = useState(false)
+
   const entriesByDate = useMemo(() => {
     const map = new Map<string, LogEntry[]>()
     let dateString = ''
@@ -38,14 +91,34 @@ export function Visualizer({ entries }: { entries: LogEntry[] }): ReactNode {
 
   return (
     <div>
-      {Array.from(entriesByDate.entries()).map(([dateString, entries]) => (
-        <div key={dateString} className="mt-10">
-          <h3>
-            {dateString} <DayOfWeek date={dateString} />
-          </h3>
-          <VisualizerOnDate entries={entries} />
-        </div>
-      ))}
+      <div className="mb-4">
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={showMovingAverage}
+            onChange={(e) => setShowMovingAverage(e.target.checked)}
+          />
+          <span>Show 24-hour blood glucose moving average</span>
+        </label>
+      </div>
+      {Array.from(entriesByDate.entries()).map(([dateString, dateEntries]) => {
+        const currentDate = new Date(dateString)
+        const movingAverageData = showMovingAverage
+          ? calculateMovingAverage(entries, currentDate)
+          : []
+
+        return (
+          <div key={dateString} className="mt-10">
+            <h3>
+              {dateString} <DayOfWeek date={dateString} />
+            </h3>
+            <VisualizerOnDate
+              entries={dateEntries}
+              movingAverageData={movingAverageData}
+            />
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -63,7 +136,13 @@ function DayOfWeek({ date }: { date: string }): ReactNode {
 
 const H = 140
 
-function VisualizerOnDate({ entries }: { entries: LogEntry[] }): ReactNode {
+function VisualizerOnDate({
+  entries,
+  movingAverageData = [],
+}: {
+  entries: LogEntry[]
+  movingAverageData?: Array<{ timestamp: Date; value: number }>
+}): ReactNode {
   const dummyRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
 
@@ -161,6 +240,28 @@ function VisualizerOnDate({ entries }: { entries: LogEntry[] }): ReactNode {
               stroke="#000"
               fill="none"
             />
+
+            {/* 移動平均線を描画 */}
+            {movingAverageData.length > 1 && (
+              <polyline
+                points={movingAverageData
+                  .map((point) => {
+                    const x =
+                      (width *
+                        (point.timestamp.getHours() * 60 +
+                          point.timestamp.getMinutes())) /
+                      (24 * 60)
+                    const y = H * (1 - point.value / 400)
+                    return `${x},${y}`
+                  })
+                  .join(' ')}
+                stroke="#ff6600"
+                strokeWidth="2"
+                fill="none"
+                opacity="0.8"
+              />
+            )}
+
             {entries.map((entry, i) => {
               const d = entry.timestamp
               const x =
