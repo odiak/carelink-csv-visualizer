@@ -9,12 +9,11 @@ import {
 import { LogEntry } from '../parse'
 import { formatDate } from '../formatDate'
 
-/** calculate moving average */
-function calculateMovingAverage(
+/** calculate moving average for all dates at once */
+function calculateAllMovingAverages(
   allEntries: LogEntry[],
-  targetDate: Date,
   windowHours: number = 24,
-): Array<{ timestamp: Date; value: number }> {
+): Map<string, Array<{ timestamp: Date; value: number }>> {
   const sensorBgEntries = allEntries
     .filter(
       (entry): entry is Extract<LogEntry, { type: 'sensor-bg' }> =>
@@ -22,42 +21,84 @@ function calculateMovingAverage(
     )
     .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
 
-  const targetDateStart = new Date(targetDate)
-  targetDateStart.setHours(0, 0, 0, 0)
-  const targetDateEnd = new Date(targetDate)
-  targetDateEnd.setHours(23, 59, 59, 999)
+  if (sensorBgEntries.length === 0) {
+    return new Map()
+  }
 
-  const movingAveragePoints: Array<{ timestamp: Date; value: number }> = []
+  // Get all unique dates
+  const uniqueDates = new Set<string>()
+  for (const entry of sensorBgEntries) {
+    const dateStr = formatDate(entry.timestamp, 'date')
+    uniqueDates.add(dateStr)
+  }
 
-  // Calculate moving average for each time in target date
-  for (let hour = 0; hour < 24; hour++) {
-    for (let minute = 0; minute < 60; minute += 15) {
-      // 15 minute intervals
-      const currentTime = new Date(targetDate)
-      currentTime.setHours(hour, minute, 0, 0)
+  const movingAveragesByDate = new Map<
+    string,
+    Array<{ timestamp: Date; value: number }>
+  >()
 
-      const windowStart = new Date(
-        currentTime.getTime() - windowHours * 60 * 60 * 1000,
-      )
-
-      const relevantEntries = sensorBgEntries.filter(
-        (entry) =>
-          entry.timestamp >= windowStart && entry.timestamp <= currentTime,
-      )
-
-      if (relevantEntries.length > 0) {
-        const average =
-          relevantEntries.reduce((sum, entry) => sum + entry.bgValue, 0) /
-          relevantEntries.length
-        movingAveragePoints.push({
-          timestamp: new Date(currentTime),
-          value: average,
-        })
+  // Pre-create an array of all time points we want to calculate for efficiency
+  const timePoints: Array<{ date: Date; dateStr: string }> = []
+  for (const dateStr of uniqueDates) {
+    const targetDate = new Date(dateStr)
+    for (let hour = 0; hour < 24; hour++) {
+      for (let minute = 0; minute < 60; minute += 15) {
+        const currentTime = new Date(targetDate)
+        currentTime.setHours(hour, minute, 0, 0)
+        timePoints.push({ date: currentTime, dateStr })
       }
     }
   }
 
-  return movingAveragePoints
+  // Sort time points for efficient processing
+  timePoints.sort((a, b) => a.date.getTime() - b.date.getTime())
+
+  // Calculate moving averages efficiently using sliding window approach
+  let entryIndex = 0
+  const windowEntries: Array<{ timestamp: Date; bgValue: number }> = []
+
+  for (const timePoint of timePoints) {
+    const windowStart = new Date(
+      timePoint.date.getTime() - windowHours * 60 * 60 * 1000,
+    )
+
+    // Add new entries to window
+    while (
+      entryIndex < sensorBgEntries.length &&
+      sensorBgEntries[entryIndex].timestamp <= timePoint.date
+    ) {
+      windowEntries.push({
+        timestamp: sensorBgEntries[entryIndex].timestamp,
+        bgValue: sensorBgEntries[entryIndex].bgValue,
+      })
+      entryIndex++
+    }
+
+    // Remove old entries from window
+    while (
+      windowEntries.length > 0 &&
+      windowEntries[0].timestamp < windowStart
+    ) {
+      windowEntries.shift()
+    }
+
+    if (windowEntries.length > 0) {
+      const average =
+        windowEntries.reduce((sum, entry) => sum + entry.bgValue, 0) /
+        windowEntries.length
+
+      if (!movingAveragesByDate.has(timePoint.dateStr)) {
+        movingAveragesByDate.set(timePoint.dateStr, [])
+      }
+
+      movingAveragesByDate.get(timePoint.dateStr)!.push({
+        timestamp: new Date(timePoint.date),
+        value: average,
+      })
+    }
+  }
+
+  return movingAveragesByDate
 }
 
 export function Visualizer({ entries }: { entries: LogEntry[] }): ReactNode {
@@ -89,6 +130,12 @@ export function Visualizer({ entries }: { entries: LogEntry[] }): ReactNode {
     return map
   }, [entries])
 
+  // Calculate all moving averages at once when showMovingAverage is enabled
+  const allMovingAverages = useMemo(() => {
+    if (!showMovingAverage) return new Map()
+    return calculateAllMovingAverages(entries)
+  }, [entries, showMovingAverage])
+
   return (
     <div>
       <div className="mb-4">
@@ -102,10 +149,7 @@ export function Visualizer({ entries }: { entries: LogEntry[] }): ReactNode {
         </label>
       </div>
       {Array.from(entriesByDate.entries()).map(([dateString, dateEntries]) => {
-        const currentDate = new Date(dateString)
-        const movingAverageData = showMovingAverage
-          ? calculateMovingAverage(entries, currentDate)
-          : []
+        const movingAverageData = allMovingAverages.get(dateString) || []
 
         return (
           <div key={dateString} className="mt-10">
