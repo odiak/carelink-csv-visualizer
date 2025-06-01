@@ -8,9 +8,14 @@ const H = 140
 export function VisualizerOnDate({
   entries,
   movingAverageData = [],
+  onBgDataClick,
 }: {
   entries: LogEntry[]
   movingAverageData?: MovingAveragePoint[]
+  onBgDataClick?: (
+    sensorBg?: Extract<LogEntry, { type: 'sensor-bg' }>,
+    measuredBg?: Extract<LogEntry, { type: 'measured-bg' }>,
+  ) => void
 }): ReactNode {
   const dummyRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
@@ -65,8 +70,15 @@ export function VisualizerOnDate({
     setBgInfoOnCursor(undefined)
   }
 
+  const handleClick = (e: React.MouseEvent<unknown>) => {
+    if (bgInfoOnCursor && e.shiftKey) {
+      onBgDataClick?.(bgInfoOnCursor.sensorBg, bgInfoOnCursor.measuredBg)
+      e.preventDefault()
+    }
+  }
+
   return (
-    <div>
+    <div className="select-none">
       <div ref={dummyRef}></div>
       {width !== 0 && (
         <div className="relative">
@@ -76,6 +88,7 @@ export function VisualizerOnDate({
             className="cursor-default"
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
+            onClick={handleClick}
           >
             <rect
               x={0}
@@ -161,11 +174,18 @@ export function VisualizerOnDate({
           </svg>
           {bgInfoOnCursor && (
             <div
-              className="absolute bg-white p-1 opacity-75"
+              className="absolute bg-white p-1 opacity-75 cursor-pointer border border-gray-300 rounded"
               style={{
                 left: bgInfoOnCursor.x + 10,
                 top: bgInfoOnCursor.y - 10,
               }}
+              onClick={() =>
+                onBgDataClick?.(
+                  bgInfoOnCursor.sensorBg,
+                  bgInfoOnCursor.measuredBg,
+                )
+              }
+              title="Click to add to list"
             >
               {bgInfoOnCursor.sensorBg !== undefined && (
                 <div>
