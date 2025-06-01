@@ -2,6 +2,7 @@ import { Fragment, ReactNode, useEffect, useRef, useState } from 'react'
 import { LogEntry } from '../parse'
 import { getShortTime } from '../utils/timeFormat'
 import { MovingAveragePoint } from '../utils/movingAverage'
+import { ClickedBgData } from './Visualizer'
 
 const H = 140
 
@@ -9,9 +10,11 @@ export function VisualizerOnDate({
   entries,
   movingAverageData = [],
   onBgDataClick,
+  clickedDataForDate = [],
 }: {
   entries: LogEntry[]
   movingAverageData?: MovingAveragePoint[]
+  clickedDataForDate?: ClickedBgData[]
   onBgDataClick?: (
     sensorBg?: Extract<LogEntry, { type: 'sensor-bg' }>,
     measuredBg?: Extract<LogEntry, { type: 'measured-bg' }>,
@@ -75,6 +78,37 @@ export function VisualizerOnDate({
       onBgDataClick?.(bgInfoOnCursor.sensorBg, bgInfoOnCursor.measuredBg)
       e.preventDefault()
     }
+  }
+
+  // Helper function to check if a data point is clicked
+  const isDataPointClicked = (entry: LogEntry) => {
+    const entryTime =
+      entry.timestamp.getHours().toString().padStart(2, '0') +
+      ':' +
+      entry.timestamp.getMinutes().toString().padStart(2, '0')
+    return clickedDataForDate.some((clicked) => {
+      if (
+        entry.type === 'sensor-bg' &&
+        clicked.sensorBgValue &&
+        clicked.sensorBgTime
+      ) {
+        return (
+          entry.bgValue === clicked.sensorBgValue &&
+          entryTime === clicked.sensorBgTime
+        )
+      }
+      if (
+        entry.type === 'measured-bg' &&
+        clicked.remoteBgValue &&
+        clicked.remoteBgTime
+      ) {
+        return (
+          entry.bgValue === clicked.remoteBgValue &&
+          entryTime === clicked.remoteBgTime
+        )
+      }
+      return false
+    })
   }
 
   return (
@@ -148,18 +182,49 @@ export function VisualizerOnDate({
               const d = entry.timestamp
               const x =
                 (width * (d.getHours() * 60 + d.getMinutes())) / (24 * 60)
+              const isClicked = isDataPointClicked(entry)
+
               if (entry.type === 'sensor-bg') {
                 const y = H * (1 - entry.bgValue / 400)
-                return <circle key={i} cx={x} cy={y} r={2} fill="#88d" />
+                return (
+                  <g key={i}>
+                    <circle cx={x} cy={y} r={2} fill="#88d" />
+                    {isClicked && (
+                      <circle
+                        cx={x}
+                        cy={y}
+                        r={4}
+                        fill="none"
+                        stroke="#f008"
+                        strokeWidth={2}
+                      />
+                    )}
+                  </g>
+                )
               }
               if (entry.type === 'measured-bg') {
                 const y = H * (1 - entry.bgValue / 400)
-                return <circle key={i} cx={x} cy={y} r={3} fill="#07f" />
+                return (
+                  <g key={i}>
+                    <circle cx={x} cy={y} r={3} fill="#07f" />
+                    {isClicked && (
+                      <circle
+                        cx={x}
+                        cy={y}
+                        r={5}
+                        fill="none"
+                        stroke="#f008"
+                        strokeWidth={2}
+                      />
+                    )}
+                  </g>
+                )
               }
               if (entry.type === 'bolus') {
                 const h = Math.max(entry.amountUnit * 10, 4)
                 return (
                   <rect
+                    key={i}
                     x={x - 2}
                     y={H - h - 1}
                     width={4}

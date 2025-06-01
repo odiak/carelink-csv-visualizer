@@ -57,19 +57,50 @@ export function Visualizer({ entries }: { entries: LogEntry[] }): ReactNode {
     sensorBg?: Extract<LogEntry, { type: 'sensor-bg' }>
     measuredBg?: Extract<LogEntry, { type: 'measured-bg' }>
   }) => {
-    const newData: ClickedBgData = {
-      id: `${data.date}-${Date.now()}-${Math.random()}`,
-      date: data.date,
-      sensorBgTime: data.sensorBg
-        ? formatDate(data.sensorBg.timestamp, 'time').slice(0, 5)
-        : undefined,
-      sensorBgValue: data.sensorBg?.bgValue,
-      remoteBgTime: data.measuredBg
-        ? formatDate(data.measuredBg.timestamp, 'time').slice(0, 5)
-        : undefined,
-      remoteBgValue: data.measuredBg?.bgValue,
+    // Check if this data already exists in the list
+    const existingDataIndex = clickedDataList.findIndex((item) => {
+      const isSameDate = item.date === data.date
+
+      // Check sensor BG match
+      const sensorMatch =
+        data.sensorBg && item.sensorBgValue && item.sensorBgTime
+          ? item.sensorBgValue === data.sensorBg.bgValue &&
+            item.sensorBgTime ===
+              formatDate(data.sensorBg.timestamp, 'time').slice(0, 5)
+          : !data.sensorBg && !item.sensorBgValue
+
+      // Check measured BG match
+      const measuredMatch =
+        data.measuredBg && item.remoteBgValue && item.remoteBgTime
+          ? item.remoteBgValue === data.measuredBg.bgValue &&
+            item.remoteBgTime ===
+              formatDate(data.measuredBg.timestamp, 'time').slice(0, 5)
+          : !data.measuredBg && !item.remoteBgValue
+
+      return isSameDate && sensorMatch && measuredMatch
+    })
+
+    if (existingDataIndex !== -1) {
+      // Data exists, remove it
+      setClickedDataList((prev) =>
+        prev.filter((_, index) => index !== existingDataIndex),
+      )
+    } else {
+      // Data doesn't exist, add it
+      const newData: ClickedBgData = {
+        id: `${data.date}-${Date.now()}-${Math.random()}`,
+        date: data.date,
+        sensorBgTime: data.sensorBg
+          ? formatDate(data.sensorBg.timestamp, 'time').slice(0, 5)
+          : undefined,
+        sensorBgValue: data.sensorBg?.bgValue,
+        remoteBgTime: data.measuredBg
+          ? formatDate(data.measuredBg.timestamp, 'time').slice(0, 5)
+          : undefined,
+        remoteBgValue: data.measuredBg?.bgValue,
+      }
+      setClickedDataList((prev) => [...prev, newData])
     }
-    setClickedDataList((prev) => [...prev, newData])
   }
 
   // Remove item from list
@@ -113,6 +144,9 @@ export function Visualizer({ entries }: { entries: LogEntry[] }): ReactNode {
       </div>
       {Array.from(entriesByDate.entries()).map(([dateString, dateEntries]) => {
         const movingAverageData = allMovingAverages.get(dateString) || []
+        const clickedDataForDate = clickedDataList.filter(
+          (data) => data.date === dateString,
+        )
 
         return (
           <div key={dateString} className="mt-10">
@@ -122,6 +156,7 @@ export function Visualizer({ entries }: { entries: LogEntry[] }): ReactNode {
             <VisualizerOnDate
               entries={dateEntries}
               movingAverageData={movingAverageData}
+              clickedDataForDate={clickedDataForDate}
               onBgDataClick={(sensorBg, measuredBg) =>
                 handleBgDataClick({ date: dateString, sensorBg, measuredBg })
               }
