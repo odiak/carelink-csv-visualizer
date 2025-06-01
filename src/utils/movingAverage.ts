@@ -2,7 +2,7 @@ import { LogEntry } from '../parse'
 import { formatDate } from '../formatDate'
 
 /** Moving average data point */
-export interface MovingAveragePoint {
+export type MovingAveragePoint = {
   timestamp: Date
   value: number
 }
