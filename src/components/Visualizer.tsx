@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, useState } from 'react'
+import { ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { LogEntry } from '../parse'
 import { formatDate } from '../utils/formatDate'
 import { calculateAllMovingAverages } from '../utils/movingAverage'
@@ -18,6 +18,9 @@ export type ClickedBgData = {
 export function Visualizer({ entries }: { entries: LogEntry[] }): ReactNode {
   const [showMovingAverage, setShowMovingAverage] = useState(false)
   const [clickedDataList, setClickedDataList] = useState<ClickedBgData[]>([])
+
+  const dummyRef = useRef<HTMLDivElement>(null)
+  const [width, setWidth] = useState(0)
 
   const entriesByDate = useMemo(() => {
     const map = new Map<string, LogEntry[]>()
@@ -124,6 +127,18 @@ export function Visualizer({ entries }: { entries: LogEntry[] }): ReactNode {
     return groups
   }, [clickedDataList])
 
+  useEffect(() => {
+    if (dummyRef.current) {
+      const observer = new ResizeObserver((entries) => {
+        setWidth(entries[0].contentRect.width)
+      })
+      observer.observe(dummyRef.current)
+      return () => {
+        observer.disconnect()
+      }
+    }
+  }, [])
+
   return (
     <div>
       <div className="mb-4">
@@ -136,28 +151,34 @@ export function Visualizer({ entries }: { entries: LogEntry[] }): ReactNode {
           <span>Show 24-hour blood glucose moving average</span>
         </label>
       </div>
-      {Array.from(entriesByDate.entries()).map(([dateString, dateEntries]) => {
-        const movingAverageData = allMovingAverages.get(dateString) || []
-        const clickedDataForDate = clickedDataList.filter(
-          (data) => data.date === dateString,
-        )
 
-        return (
-          <div key={dateString} className="mt-10">
-            <h3>
-              {dateString} <DayOfWeek date={dateString} />
-            </h3>
-            <VisualizerOnDate
-              entries={dateEntries}
-              movingAverageData={movingAverageData}
-              clickedDataForDate={clickedDataForDate}
-              onBgDataClick={(sensorBg, measuredBg) =>
-                handleBgDataClick({ date: dateString, sensorBg, measuredBg })
-              }
-            />
-          </div>
-        )
-      })}
+      <div ref={dummyRef} />
+
+      {width !== 0 &&
+        Array.from(entriesByDate.entries()).map(([dateString, dateEntries]) => {
+          const movingAverageData = allMovingAverages.get(dateString) || []
+          const clickedDataForDate = clickedDataList.filter(
+            (data) => data.date === dateString,
+          )
+
+          return (
+            <div key={dateString} className="mt-10">
+              <h3>
+                {dateString} <DayOfWeek date={dateString} />
+              </h3>
+              <VisualizerOnDate
+                entries={dateEntries}
+                width={width}
+                height={140}
+                movingAverageData={movingAverageData}
+                clickedDataForDate={clickedDataForDate}
+                onBgDataClick={(sensorBg, measuredBg) =>
+                  handleBgDataClick({ date: dateString, sensorBg, measuredBg })
+                }
+              />
+            </div>
+          )
+        })}
 
       {/* Fixed list displayed at the bottom right */}
       {clickedDataList.length > 0 && (
