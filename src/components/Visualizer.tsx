@@ -9,9 +9,9 @@ import { VisualizerOnDate } from './VisualizerOnDate'
 export type ClickedBgData = {
   id: string
   date: string
-  sensorBgTime?: string
+  sensorBgTime?: Date
   sensorBgValue?: number
-  remoteBgTime?: string
+  remoteBgTime?: Date
   remoteBgValue?: number
 }
 
@@ -65,14 +65,14 @@ export function Visualizer({ entries }: { entries: LogEntry[] }): ReactNode {
       const sensorMatch =
         data.sensorBg && item.sensorBgValue && item.sensorBgTime
           ? item.sensorBgValue === data.sensorBg.bgValue &&
-            item.sensorBgTime === formatDate(data.sensorBg.timestamp, 'time')
+            item.sensorBgTime?.getTime() === data.sensorBg.timestamp.getTime()
           : !data.sensorBg && !item.sensorBgValue
 
       // Check measured BG match
       const measuredMatch =
         data.measuredBg && item.remoteBgValue && item.remoteBgTime
           ? item.remoteBgValue === data.measuredBg.bgValue &&
-            item.remoteBgTime === formatDate(data.measuredBg.timestamp, 'time')
+            item.remoteBgTime?.getTime() === data.measuredBg.timestamp.getTime()
           : !data.measuredBg && !item.remoteBgValue
 
       return isSameDate && sensorMatch && measuredMatch
@@ -88,13 +88,9 @@ export function Visualizer({ entries }: { entries: LogEntry[] }): ReactNode {
       const newData: ClickedBgData = {
         id: `${data.date}-${Date.now()}-${Math.random()}`,
         date: data.date,
-        sensorBgTime: data.sensorBg
-          ? formatDate(data.sensorBg.timestamp, 'time')
-          : undefined,
+        sensorBgTime: data.sensorBg?.timestamp,
         sensorBgValue: data.sensorBg?.bgValue,
-        remoteBgTime: data.measuredBg
-          ? formatDate(data.measuredBg.timestamp, 'time')
-          : undefined,
+        remoteBgTime: data.measuredBg?.timestamp,
         remoteBgValue: data.measuredBg?.bgValue,
       }
       setClickedDataList((prev) => [...prev, newData])
@@ -119,9 +115,9 @@ export function Visualizer({ entries }: { entries: LogEntry[] }): ReactNode {
     // Sort items within each group by time
     for (const [, items] of groups) {
       items.sort((a, b) => {
-        const timeA = a.sensorBgTime ?? a.remoteBgTime ?? '00:00'
-        const timeB = b.sensorBgTime ?? b.remoteBgTime ?? '00:00'
-        return timeA.localeCompare(timeB)
+        const ta = (a.sensorBgTime ?? a.remoteBgTime)?.getTime() ?? 0
+        const tb = (b.sensorBgTime ?? b.remoteBgTime)?.getTime() ?? 0
+        return ta - tb
       })
     }
 
@@ -193,13 +189,13 @@ export function Visualizer({ entries }: { entries: LogEntry[] }): ReactNode {
                         {item.sensorBgTime && item.sensorBgValue && (
                           <div>
                             Sensor: {item.sensorBgValue}mg/dL (
-                            {item.sensorBgTime})
+                            {formatDate(item.sensorBgTime, 'time')})
                           </div>
                         )}
                         {item.remoteBgTime && item.remoteBgValue && (
                           <div>
                             Remote: {item.remoteBgValue}mg/dL (
-                            {item.remoteBgTime})
+                            {formatDate(item.remoteBgTime, 'time')})
                           </div>
                         )}
                       </div>

@@ -82,8 +82,6 @@ export function VisualizerOnDate({
 
   // Helper function to check if a data point is clicked
   const isDataPointClicked = (entry: LogEntry) => {
-    const entryTime = formatDate(entry.timestamp, 'time')
-
     return clickedDataForDate.some((clicked) => {
       if (
         entry.type === 'sensor-bg' &&
@@ -92,7 +90,7 @@ export function VisualizerOnDate({
       ) {
         return (
           entry.bgValue === clicked.sensorBgValue &&
-          entryTime === clicked.sensorBgTime
+          entry.timestamp.getTime() === clicked.sensorBgTime.getTime()
         )
       }
       if (
@@ -102,7 +100,7 @@ export function VisualizerOnDate({
       ) {
         return (
           entry.bgValue === clicked.remoteBgValue &&
-          entryTime === clicked.remoteBgTime
+          entry.timestamp.getTime() === clicked.remoteBgTime.getTime()
         )
       }
       return false
