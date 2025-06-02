@@ -1,6 +1,6 @@
 import { ReactNode, useMemo, useState } from 'react'
 import { LogEntry } from '../parse'
-import { formatDate } from '../formatDate'
+import { formatDate } from '../utils/formatDate'
 import { calculateAllMovingAverages } from '../utils/movingAverage'
 import { DayOfWeek } from './DayOfWeek'
 import { VisualizerOnDate } from './VisualizerOnDate'
@@ -65,16 +65,14 @@ export function Visualizer({ entries }: { entries: LogEntry[] }): ReactNode {
       const sensorMatch =
         data.sensorBg && item.sensorBgValue && item.sensorBgTime
           ? item.sensorBgValue === data.sensorBg.bgValue &&
-            item.sensorBgTime ===
-              formatDate(data.sensorBg.timestamp, 'time').slice(0, 5)
+            item.sensorBgTime === formatDate(data.sensorBg.timestamp, 'time')
           : !data.sensorBg && !item.sensorBgValue
 
       // Check measured BG match
       const measuredMatch =
         data.measuredBg && item.remoteBgValue && item.remoteBgTime
           ? item.remoteBgValue === data.measuredBg.bgValue &&
-            item.remoteBgTime ===
-              formatDate(data.measuredBg.timestamp, 'time').slice(0, 5)
+            item.remoteBgTime === formatDate(data.measuredBg.timestamp, 'time')
           : !data.measuredBg && !item.remoteBgValue
 
       return isSameDate && sensorMatch && measuredMatch
@@ -91,11 +89,11 @@ export function Visualizer({ entries }: { entries: LogEntry[] }): ReactNode {
         id: `${data.date}-${Date.now()}-${Math.random()}`,
         date: data.date,
         sensorBgTime: data.sensorBg
-          ? formatDate(data.sensorBg.timestamp, 'time').slice(0, 5)
+          ? formatDate(data.sensorBg.timestamp, 'time')
           : undefined,
         sensorBgValue: data.sensorBg?.bgValue,
         remoteBgTime: data.measuredBg
-          ? formatDate(data.measuredBg.timestamp, 'time').slice(0, 5)
+          ? formatDate(data.measuredBg.timestamp, 'time')
           : undefined,
         remoteBgValue: data.measuredBg?.bgValue,
       }

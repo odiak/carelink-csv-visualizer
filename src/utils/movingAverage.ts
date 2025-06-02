@@ -1,5 +1,5 @@
 import { LogEntry } from '../parse'
-import { formatDate } from '../formatDate'
+import { formatDate } from './formatDate'
 
 /** Moving average data point */
 export type MovingAveragePoint = {

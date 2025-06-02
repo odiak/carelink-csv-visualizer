@@ -1,8 +1,8 @@
 import { Fragment, ReactNode, useEffect, useRef, useState } from 'react'
 import { LogEntry } from '../parse'
-import { getShortTime } from '../utils/timeFormat'
 import { MovingAveragePoint } from '../utils/movingAverage'
 import { ClickedBgData } from './Visualizer'
+import { formatDate } from '../utils/formatDate'
 
 const H = 140
 
@@ -82,10 +82,8 @@ export function VisualizerOnDate({
 
   // Helper function to check if a data point is clicked
   const isDataPointClicked = (entry: LogEntry) => {
-    const entryTime =
-      entry.timestamp.getHours().toString().padStart(2, '0') +
-      ':' +
-      entry.timestamp.getMinutes().toString().padStart(2, '0')
+    const entryTime = formatDate(entry.timestamp, 'time')
+
     return clickedDataForDate.some((clicked) => {
       if (
         entry.type === 'sensor-bg' &&
@@ -255,13 +253,13 @@ export function VisualizerOnDate({
               {bgInfoOnCursor.sensorBg !== undefined && (
                 <div>
                   sensor: {bgInfoOnCursor.sensorBg.bgValue}mg/dL (
-                  {getShortTime(bgInfoOnCursor.sensorBg.timestamp)})
+                  {formatDate(bgInfoOnCursor.sensorBg.timestamp, 'time')})
                 </div>
               )}
               {bgInfoOnCursor.measuredBg !== undefined && (
                 <div>
                   measured: {bgInfoOnCursor.measuredBg.bgValue}mg/dL (
-                  {getShortTime(bgInfoOnCursor.measuredBg.timestamp)})
+                  {formatDate(bgInfoOnCursor.measuredBg.timestamp, 'time')})
                 </div>
               )}
             </div>
